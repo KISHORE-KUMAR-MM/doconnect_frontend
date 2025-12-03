@@ -1,0 +1,225 @@
+.register-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0a0a0a 0%, #0a1628 50%, #0a0a0a 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.register-container {
+  width: 100%;
+  max-width: 420px;
+  z-index: 10;
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.register-header .logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.register-header .logo-icon {
+  width: 50px;
+  height: 50px;
+  background: var(--gradient-blue);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 20px;
+  color: white;
+}
+
+.register-header .logo h1 {
+  font-size: 32px;
+  font-weight: 700;
+  background: var(--gradient-blue);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.register-header .tagline {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.register-form {
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-color);
+}
+
+.register-form h2 {
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.register-form .error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.register-form .success-message {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid var(--success);
+  color: var(--success);
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.register-form .form-group {
+  margin-bottom: 18px;
+}
+
+.register-form .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.register-form .form-group input {
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 15px;
+  transition: var(--transition);
+}
+
+.register-form .form-group input:focus {
+  outline: none;
+  border-color: var(--blue-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.register-form .form-group input::placeholder {
+  color: var(--text-muted);
+}
+
+.register-form .btn-primary {
+  width: 100%;
+  padding: 14px 24px;
+  background: var(--gradient-blue);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  transition: var(--transition);
+  margin-top: 10px;
+}
+
+.register-form .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-blue);
+}
+
+.register-form .btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.register-form .form-footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.register-form .form-footer p {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.register-decoration {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.register-decoration .decoration-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--blue-primary);
+  opacity: 0.03;
+}
+
+.register-decoration .circle-1 {
+  width: 500px;
+  height: 500px;
+  top: -150px;
+  left: -150px;
+}
+
+.register-decoration .circle-2 {
+  width: 400px;
+  height: 400px;
+  bottom: -100px;
+  right: -100px;
+}
+/* Role Dropdown Styling */
+.register-form .form-group select {
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 15px;
+  transition: var(--transition);
+  appearance: none; /* removes default arrow */
+  cursor: pointer;
+}
+
+/* Dropdown focus */
+.register-form .form-group select:focus {
+  outline: none;
+  border-color: var(--blue-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Dropdown arrow (custom) */
+.register-form .form-group select {
+  background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: 98% center;
+  background-size: 18px;
+}
+
+@media (max-width: 480px) {
+  .register-form {
+    padding: 30px 24px;
+  }
+  
+  .register-header .logo h1 {
+    font-size: 26px;
+  }
+}
