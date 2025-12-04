@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>DoConnect – Ask Question</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./script.js" defer></script>
+  </head>
+  <body data-page="ask">
+    <div class="app-shell">
+      <header class="app-navbar">
+        <div class="navbar-brand">
+          <div class="logo-icon">DC</div>
+          <div>
+            <div>DoConnect</div>
+            <small class="eyebrow" style="letter-spacing: 0.3em">Knowledge Hub</small>
+          </div>
+        </div>
+        <div class="navbar-actions">
+          <button class="btn btn-ghost" data-nav="dashboard">Dashboard</button>
+          <button class="btn btn-ghost" data-nav="ask">Ask</button>
+          <div class="nav-chip" data-role="nav-username">Guest</div>
+          <button class="btn btn-secondary" data-action="logout">Logout</button>
+        </div>
+      </header>
+
+      <main>
+        <section>
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Share</p>
+              <h1>Ask a Question</h1>
+              <p>Provide as much detail as possible to get quality answers.</p>
+            </div>
+            <button class="btn btn-secondary" data-nav="dashboard">← Back</button>
+          </div>
+
+          <div class="panel">
+            <div class="status-message status-error hidden" data-role="ask-error"></div>
+            <div class="status-message status-success hidden" data-role="ask-success"></div>
+            <form id="ask-form" class="form-grid">
+              <div class="form-group">
+                <label for="ask-topic">Topic *</label>
+                <select id="ask-topic" name="topic" required>
+                  <option value="">Select topic</option>
+                  <option value="Technology">Technology</option>
+                  <option value="Science">Science</option>
+                  <option value="Health">Health</option>
+                  <option value="Business">Business</option>
+                  <option value="Education">Education</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="ask-title">Title *</label>
+                <input id="ask-title" name="title" placeholder="Short descriptive title" required />
+              </div>
+              <div class="form-group">
+                <label for="ask-description">Question *</label>
+                <textarea id="ask-description" name="description" rows="6" required></textarea>
+                <span class="char-count" data-role="ask-char-count">0 / 2000</span>
+              </div>
+              <div class="form-group" style="flex-direction: row; gap: 0.75rem">
+                <button type="button" class="btn btn-secondary" data-nav="dashboard">Cancel</button>
+                <button type="submit" class="btn btn-primary" data-role="ask-submit">
+                  Submit Question
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
+
+

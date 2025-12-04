@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>DoConnect – Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./script.js" defer></script>
+  </head>
+  <body data-page="admin-dashboard">
+    <div class="app-shell">
+      <main>
+        <section>
+          <div class="admin-shell">
+            <header class="page-header" style="align-items: flex-start">
+              <div>
+                <p class="eyebrow">Admin Panel</p>
+                <h1>
+                  Welcome,
+                  <span data-role="admin-name">Admin</span>
+                </h1>
+              </div>
+              <div class="admin-actions">
+                <button class="btn btn-secondary" data-action="admin-refresh">Refresh Data</button>
+                <button class="btn btn-danger" data-action="admin-logout">Logout</button>
+              </div>
+            </header>
+
+            <div class="panel">
+              <div
+                class="admin-stats"
+                id="admin-stats"
+                style="display: flex; gap: 1rem; flex-wrap: wrap"
+              >
+                <div class="question-card" style="flex: 1">
+                  <p class="muted">Pending Questions</p>
+                  <h2 data-role="pending-questions-count">0</h2>
+                </div>
+                <div class="question-card" style="flex: 1">
+                  <p class="muted">Pending Answers</p>
+                  <h2 data-role="pending-answers-count">0</h2>
+                </div>
+              </div>
+
+              <div class="admin-tabs">
+                <button class="tab-btn active" data-action="admin-tab" data-tab="questions">
+                  Pending Questions
+                </button>
+                <button class="tab-btn" data-action="admin-tab" data-tab="answers">
+                  Pending Answers
+                </button>
+                <button class="tab-btn" data-action="admin-tab" data-tab="all">All Questions</button>
+                <button class="tab-btn" data-action="admin-tab" data-tab="users">Users</button>
+              </div>
+
+              <div class="status-message status-error hidden" data-role="admin-banner"></div>
+
+              <div class="panel hidden" id="admin-loading">
+                <div class="loading-state">
+                  <div class="loader"></div>
+                  <p>Loading admin data...</p>
+                </div>
+              </div>
+
+              <div class="admin-list" id="admin-content"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
+
+
