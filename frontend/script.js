@@ -52,49 +52,78 @@
   };
 
   const dom = {};
+  const ROUTES = {
+    login: { guard: ensureLoggedOut, onEnter: resetLoginForm },
+    register: { guard: ensureLoggedOut, onEnter: resetRegisterForm },
+    dashboard: { guard: ensureUser, onEnter: enterDashboard },
+    ask: { guard: ensureUser, onEnter: resetAskForm },
+    answer: { guard: ensureUser, onEnter: ({ param }) => showAnswerView(param) },
+    'admin-login': { guard: ensureAdminLoggedOut, onEnter: resetAdminLoginForm },
+    'admin-dashboard': { guard: ensureAdmin, onEnter: enterAdminDashboard },
+  };
 
   let adminBannerTimer;
 
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
+    cacheDom();
     hydrateState();
-    cacheCommonDom();
-    bindCommonEvents();
-
-    const page = document.body.dataset.page || 'login';
-
-    switch (page) {
-      case 'login':
-        initLoginPage();
-        break;
-      case 'register':
-        initRegisterPage();
-        break;
-      case 'dashboard':
-        ensureUser() && initDashboardPage();
-        break;
-      case 'ask':
-        ensureUser() && initAskPage();
-        break;
-      case 'answer':
-        ensureUser() && initAnswerPage();
-        break;
-      case 'admin-login':
-        initAdminLoginPage();
-        break;
-      case 'admin-dashboard':
-        ensureAdmin() && initAdminDashboardPage();
-        break;
-      default:
-        window.location.href = './login.html';
-    }
+    bindEvents();
+    handleRoute();
   }
 
-  function cacheCommonDom() {
-    dom.navbar = document.querySelector('.app-navbar');
+  function cacheDom() {
+    dom.sections = new Map();
+    document.querySelectorAll('[data-view]').forEach((section) => {
+      dom.sections.set(section.dataset.view, section);
+    });
+    dom.navbar = document.querySelector('[data-role="navbar"]');
     dom.navUsernameChip = document.querySelector('[data-role="nav-username"]');
     dom.welcomeName = document.querySelector('[data-role="welcome-name"]');
+
+    dom.loginForm = document.getElementById('login-form');
+    dom.loginError = document.querySelector('[data-role="login-error"]');
+    dom.loginSubmit = document.querySelector('[data-role="login-submit"]');
+
+    dom.registerForm = document.getElementById('register-form');
+    dom.regError = document.querySelector('[data-role="register-error"]');
+    dom.regSuccess = document.querySelector('[data-role="register-success"]');
+    dom.regSubmit = document.querySelector('[data-role="register-submit"]');
+
+    dom.dashboardSearch = document.getElementById('dashboard-search');
+    dom.dashboardCategory = document.getElementById('dashboard-category');
+    dom.questionsGrid = document.getElementById('questions-grid');
+    dom.questionsEmpty = document.getElementById('questions-empty');
+    dom.dashboardLoading = document.getElementById('dashboard-loading');
+
+    dom.askForm = document.getElementById('ask-form');
+    dom.askError = document.querySelector('[data-role="ask-error"]');
+    dom.askSuccess = document.querySelector('[data-role="ask-success"]');
+    dom.askSubmit = document.querySelector('[data-role="ask-submit"]');
+    dom.askCharCount = document.querySelector('[data-role="ask-char-count"]');
+    dom.askDescription = document.getElementById('ask-description');
+
+    dom.answerLoading = document.getElementById('answer-loading');
+    dom.answerContent = document.getElementById('answer-content');
+    dom.answerQuestion = document.getElementById('answer-question');
+    dom.answersList = document.getElementById('answers-list');
+    dom.answersEmpty = document.getElementById('answers-empty');
+    dom.answerForm = document.getElementById('answer-form');
+    dom.answerError = document.querySelector('[data-role="answer-error"]');
+    dom.answerSuccess = document.querySelector('[data-role="answer-success"]');
+    dom.answerSubmit = document.querySelector('[data-role="answer-submit"]');
+
+    dom.adminLoginForm = document.getElementById('admin-login-form');
+    dom.adminLoginError = document.querySelector('[data-role="admin-login-error"]');
+    dom.adminLoginSubmit = document.querySelector('[data-role="admin-login-submit"]');
+
+    dom.adminName = document.querySelector('[data-role="admin-name"]');
+    dom.pendingQuestionsCount = document.querySelector('[data-role="pending-questions-count"]');
+    dom.pendingAnswersCount = document.querySelector('[data-role="pending-answers-count"]');
+    dom.adminLoading = document.getElementById('admin-loading');
+    dom.adminContent = document.getElementById('admin-content');
+    dom.adminBanner = document.querySelector('[data-role="admin-banner"]');
 
     document.querySelectorAll('button[data-role]').forEach((btn) => {
       if (!btn.dataset.defaultLabel) {
@@ -116,20 +145,90 @@
     updateNavbarUser();
   }
 
-  function bindCommonEvents() {
+  function bindEvents() {
+    window.addEventListener('hashchange', handleRoute);
     document.body.addEventListener('click', handleActionClick);
+
+    dom.loginForm?.addEventListener('submit', handleLogin);
+    dom.registerForm?.addEventListener('submit', handleRegister);
+    dom.dashboardSearch?.addEventListener('input', handleSearchInput);
+    dom.dashboardCategory?.addEventListener('change', (event) => {
+      state.selectedCategory = event.target.value;
+      applyFilters();
+    });
+    dom.askForm?.addEventListener('submit', handleAskSubmit);
+    dom.askDescription?.addEventListener('input', updateAskCharCount);
+    dom.answerForm?.addEventListener('submit', handleAnswerSubmit);
+    dom.adminLoginForm?.addEventListener('submit', handleAdminLogin);
+  }
+
+  function handleRoute() {
+    const parsed = parseHash(window.location.hash);
+    const target = ROUTES[parsed.name] ? parsed.name : 'login';
+    const route = ROUTES[target];
+    if (route.guard && !route.guard(parsed)) {
+      return;
+    }
+    activateView(target);
+    route.onEnter?.(parsed);
+  }
+
+  function parseHash(hash) {
+    const clean = (hash || '').replace(/^#/, '') || 'login';
+    const [name, param] = clean.split('/');
+    return { name, param: param || null };
+  }
+
+  function activateView(name) {
+    dom.sections.forEach((section, key) => {
+      section.classList.toggle('active', key === name);
+    });
+    updateNavbarVisibility(name);
+  }
+
+  function updateNavbarVisibility(view) {
+    const hide = ['login', 'register', 'admin-login', 'admin-dashboard'].includes(view);
+    dom.navbar?.classList.toggle('hidden', hide);
+  }
+
+  function ensureLoggedOut() {
+    if (state.username) {
+      setHash('dashboard');
+      return false;
+    }
+    return true;
   }
 
   function ensureUser() {
-    if (state.username) return true;
-    window.location.href = './login.html';
+    if (state.username) {
+      return true;
+    }
+    setHash('login');
     return false;
   }
 
+  function ensureAdminLoggedOut() {
+    if (state.adminUsername) {
+      setHash('admin-dashboard');
+      return false;
+    }
+    return true;
+  }
+
   function ensureAdmin() {
-    if (state.adminUsername) return true;
-    window.location.href = './admin-login.html';
+    if (state.adminUsername) {
+      return true;
+    }
+    setHash('admin-login');
     return false;
+  }
+
+  function setHash(value) {
+    if (window.location.hash === `#${value}`) {
+      handleRoute();
+    } else {
+      window.location.hash = `#${value}`;
+    }
   }
 
   function updateNavbarUser() {
@@ -142,54 +241,21 @@
     }
   }
 
-  // PAGE INITIALIZERS
-  function initLoginPage() {
-    const form = document.getElementById('login-form');
-    dom.loginForm = form;
-    dom.loginError = document.querySelector('[data-role="login-error"]');
-    dom.loginSubmit = document.querySelector('[data-role="login-submit"]');
-
-    if (state.username) {
-      // already logged in, go to dashboard
-      window.location.href = './dashboard.html';
-      return;
-    }
-
-    form?.addEventListener('submit', handleLogin);
+  function resetLoginForm() {
+    dom.loginForm?.reset();
+    hideStatus(dom.loginError);
+    setButtonLoading(dom.loginSubmit, false);
   }
 
-  function initRegisterPage() {
-    const form = document.getElementById('register-form');
-    dom.registerForm = form;
-    dom.regError = document.querySelector('[data-role="register-error"]');
-    dom.regSuccess = document.querySelector('[data-role="register-success"]');
-    dom.regSubmit = document.querySelector('[data-role="register-submit"]');
-
-    form?.addEventListener('submit', handleRegister);
+  function resetRegisterForm() {
+    dom.registerForm?.reset();
+    hideStatus(dom.regError);
+    hideStatus(dom.regSuccess);
+    setButtonLoading(dom.regSubmit, false);
   }
 
-  function initDashboardPage() {
-    dom.dashboardSearch = document.getElementById('dashboard-search');
-    dom.dashboardCategory = document.getElementById('dashboard-category');
-    dom.questionsGrid = document.getElementById('questions-grid');
-    dom.questionsEmpty = document.getElementById('questions-empty');
-    dom.dashboardLoading = document.getElementById('dashboard-loading');
-
-    document.querySelectorAll('[data-nav]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget.getAttribute('data-nav');
-        if (target === 'dashboard') window.location.href = './dashboard.html';
-        if (target === 'ask') window.location.href = './ask.html';
-      });
-    });
-
-    dom.dashboardSearch?.addEventListener('input', handleSearchInput);
-    dom.dashboardCategory?.addEventListener('change', (event) => {
-      state.selectedCategory = event.target.value;
-      applyFilters();
-    });
-
-    // Load questions
+  function enterDashboard() {
+    updateNavbarUser();
     if (!state.questions.length) {
       loadQuestions();
     } else {
@@ -197,83 +263,36 @@
     }
   }
 
-  function initAskPage() {
-    dom.askForm = document.getElementById('ask-form');
-    dom.askError = document.querySelector('[data-role="ask-error"]');
-    dom.askSuccess = document.querySelector('[data-role="ask-success"]');
-    dom.askSubmit = document.querySelector('[data-role="ask-submit"]');
-    dom.askCharCount = document.querySelector('[data-role="ask-char-count"]');
-    dom.askDescription = document.getElementById('ask-description');
-
-    document.querySelectorAll('[data-nav]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget.getAttribute('data-nav');
-        if (target === 'dashboard') window.location.href = './dashboard.html';
-        if (target === 'ask') window.location.href = './ask.html';
-      });
-    });
-
-    dom.askForm?.addEventListener('submit', handleAskSubmit);
-    dom.askDescription?.addEventListener('input', updateAskCharCount);
+  function resetAskForm() {
+    dom.askForm?.reset();
+    hideStatus(dom.askError);
+    hideStatus(dom.askSuccess);
     updateAskCharCount();
+    setButtonLoading(dom.askSubmit, false);
   }
 
-  function initAnswerPage() {
-    dom.answerLoading = document.getElementById('answer-loading');
-    dom.answerContent = document.getElementById('answer-content');
-    dom.answerQuestion = document.getElementById('answer-question');
-    dom.answersList = document.getElementById('answers-list');
-    dom.answersEmpty = document.getElementById('answers-empty');
-    dom.answerForm = document.getElementById('answer-form');
-    dom.answerError = document.querySelector('[data-role="answer-error"]');
-    dom.answerSuccess = document.querySelector('[data-role="answer-success"]');
-    dom.answerSubmit = document.querySelector('[data-role="answer-submit"]');
-
-    document.querySelectorAll('[data-nav]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget.getAttribute('data-nav');
-        if (target === 'dashboard') window.location.href = './dashboard.html';
-        if (target === 'ask') window.location.href = './ask.html';
-      });
-    });
-
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id');
+  function showAnswerView(id) {
     if (!id) {
-      window.location.href = './dashboard.html';
+      setHash('dashboard');
       return;
     }
     state.currentQuestionId = id;
-
-    dom.answerForm?.addEventListener('submit', handleAnswerSubmit);
+    dom.answerForm?.reset();
+    hideStatus(dom.answerError);
+    hideStatus(dom.answerSuccess);
     loadQuestionThread(id);
   }
 
-  function initAdminLoginPage() {
-    dom.adminLoginForm = document.getElementById('admin-login-form');
-    dom.adminLoginError = document.querySelector('[data-role="admin-login-error"]');
-    dom.adminLoginSubmit = document.querySelector('[data-role="admin-login-submit"]');
-
-    if (state.adminUsername) {
-      window.location.href = './admin-dashboard.html';
-      return;
-    }
-
-    dom.adminLoginForm?.addEventListener('submit', handleAdminLogin);
+  function resetAdminLoginForm() {
+    dom.adminLoginForm?.reset();
+    hideStatus(dom.adminLoginError);
+    setButtonLoading(dom.adminLoginSubmit, false);
   }
 
-  function initAdminDashboardPage() {
-    dom.adminName = document.querySelector('[data-role="admin-name"]');
-    dom.pendingQuestionsCount = document.querySelector('[data-role="pending-questions-count"]');
-    dom.pendingAnswersCount = document.querySelector('[data-role="pending-answers-count"]');
-    dom.adminLoading = document.getElementById('admin-loading');
-    dom.adminContent = document.getElementById('admin-content');
-    dom.adminBanner = document.querySelector('[data-role="admin-banner"]');
-
+  function enterAdminDashboard() {
     if (dom.adminName) {
       dom.adminName.textContent = state.adminUsername || 'Admin';
     }
-
     loadAdminData();
   }
 
@@ -298,14 +317,11 @@
       const data = await response.json();
       localStorage.setItem('user', JSON.stringify(data));
       localStorage.setItem('username', payload.username);
-      if (data.token) {
-        localStorage.setItem('userToken', data.token);
-      }
       state.username = payload.username;
       state.user = data;
       updateNavbarUser();
       event.target.reset();
-      window.location.href = './dashboard.html';
+      setHash('dashboard');
     } catch (error) {
       showStatus(dom.loginError, error.message || 'Unable to sign in', 'error');
     } finally {
@@ -347,9 +363,7 @@
 
       if (response.ok) {
         showStatus(dom.regSuccess, 'Registration successful! Redirecting to login...', 'success');
-        setTimeout(() => {
-          window.location.href = './login.html';
-        }, 1800);
+        setTimeout(() => setHash('login'), 1800);
       } else {
         const text = await response.text();
         showStatus(dom.regError, text || 'Registration failed. Try again.', 'error');
@@ -479,15 +493,9 @@
         postedAt: new Date().toISOString(),
       };
 
-      const token = getUserToken();
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-
       const response = await fetch(API.questions.ask, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
@@ -499,17 +507,13 @@
         );
         event.target.reset();
         updateAskCharCount();
-        setTimeout(() => {
-          window.location.href = './dashboard.html';
-        }, 1800);
+        setTimeout(() => setHash('dashboard'), 1800);
       } else {
         showStatus(dom.askError, 'Failed to submit question. Try again.', 'error');
       }
     } catch (error) {
       showStatus(dom.askSuccess, 'Question submitted (offline mode).', 'success');
-      setTimeout(() => {
-        window.location.href = './dashboard.html';
-      }, 1500);
+      setTimeout(() => setHash('dashboard'), 1500);
     } finally {
       setButtonLoading(dom.askSubmit, false);
     }
@@ -605,15 +609,9 @@
         createdAt: new Date().toISOString(),
       };
 
-      const token = getUserToken();
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-
       const response = await fetch(API.answers.post, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
 
@@ -650,12 +648,9 @@
       const data = await response.json();
       localStorage.setItem('admin', JSON.stringify(data));
       localStorage.setItem('adminUsername', payload.username);
-      if (data.token) {
-        localStorage.setItem('adminToken', data.token);
-      }
       state.adminUsername = payload.username;
       state.admin = data;
-      window.location.href = './admin-dashboard.html';
+      setHash('admin-dashboard');
     } catch (error) {
       showStatus(dom.adminLoginError, error.message || 'Unable to sign in', 'error');
     } finally {
@@ -668,12 +663,11 @@
     state.adminLoading = true;
     dom.adminLoading?.classList.remove('hidden');
     try {
-      const token = getAdminToken();
       const [pendingQuestions, pendingAnswers, allQuestions, users] = await Promise.all([
-        fetchJsonWithAuth(API.questions.pending, token, []),
-        fetchJsonWithAuth(API.answers.pending, token, []),
-        fetchJsonWithAuth(API.questions.all, token, []),
-        fetchJsonWithAuth(API.users.all, token, []),
+        fetchJson(API.questions.pending, []),
+        fetchJson(API.answers.pending, []),
+        fetchJson(API.questions.all, []),
+        fetchJson(API.users.all, []),
       ]);
 
       state.adminData = {
@@ -839,13 +833,19 @@
     const action = actionEl.dataset.action;
 
     switch (action) {
+      case 'nav-dashboard':
+      case 'go-dashboard':
+        setHash('dashboard');
+        break;
+      case 'ask-question':
+        setHash('ask');
+        break;
       case 'logout':
         logoutUser();
         break;
       case 'view-question':
         if (actionEl.dataset.id) {
-          const id = actionEl.dataset.id;
-          window.location.href = `./answer.html?id=${encodeURIComponent(id)}`;
+          setHash(`answer/${actionEl.dataset.id}`);
         }
         break;
       case 'refresh-questions':
@@ -894,7 +894,7 @@
     state.username = '';
     state.user = null;
     updateNavbarUser();
-    window.location.href = './login.html';
+    setHash('login');
   }
 
   function logoutAdmin() {
@@ -902,7 +902,7 @@
     localStorage.removeItem('adminUsername');
     state.admin = null;
     state.adminUsername = '';
-    window.location.href = './admin-login.html';
+    setHash('admin-login');
   }
 
   async function adminApproveQuestion(id) {
@@ -1000,15 +1000,10 @@
         headers: options.headers || {},
         body: options.body,
       };
-      const token = getAdminToken();
-      if (token) {
-        config.headers = config.headers || {};
-        config.headers.Authorization = `Bearer ${token}`;
-      }
       if (config.body && !config.headers['Content-Type']) {
         config.headers['Content-Type'] = 'application/json';
       }
-      if (!config.body && (!config.headers || Object.keys(config.headers).length === 0)) {
+      if (!config.body && Object.keys(config.headers).length === 0) {
         delete config.headers;
       }
 
@@ -1019,10 +1014,10 @@
       showAdminBanner(successMessage, 'success');
       if (reloadUsersOnly) {
         if (url.includes('/users/')) {
-          const users = await fetchJsonWithAuth(API.users.all, token, []);
+          const users = await fetchJson(API.users.all, []);
           state.adminData.users = users || [];
         } else if (url.includes('/question/update')) {
-          const allQuestions = await fetchJsonWithAuth(API.questions.all, token, []);
+          const allQuestions = await fetchJson(API.questions.all, []);
           state.adminData.allQuestions = allQuestions || [];
         }
         renderAdminContent();
@@ -1094,31 +1089,6 @@
       console.warn('Request failed', error);
       return fallback;
     }
-  }
-
-  async function fetchJsonWithAuth(url, token, fallback = null) {
-    try {
-      const headers = {};
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      }
-      const response = await fetch(url, { headers });
-      if (!response.ok) {
-        throw new Error(`Request failed: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.warn('Request failed', error);
-      return fallback;
-    }
-  }
-
-  function getUserToken() {
-    return (state.user && state.user.token) || localStorage.getItem('userToken') || null;
-  }
-
-  function getAdminToken() {
-    return (state.admin && state.admin.token) || localStorage.getItem('adminToken') || null;
   }
 
   function safeParse(value) {

@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import com.example.user.entity.User;
 import com.example.user.feign.AdminClient;
-import com.example.user.security.JwtUtil;
 import com.example.user.service.UserService;
 
 @CrossOrigin(origins = "http://127.0.0.1:5500")
@@ -64,16 +63,7 @@ public class UserAuthController {
             return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
         }
 
-        String token = JwtUtil.generateToken(user.getUsername(), user.getRole());
-
-        return ResponseEntity.ok(
-                Map.of(
-                        "message", "Login successful",
-                        "username", user.getUsername(),
-                        "role", user.getRole(),
-                        "token", token
-                )
-        );
+        return ResponseEntity.ok(Map.of("message", "Login successful","username", user.getUsername(),"role", user.getRole()));
     }
 
     @PostMapping("/logout")
