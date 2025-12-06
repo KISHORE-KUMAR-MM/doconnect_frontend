@@ -1,14 +1,15 @@
 package com.example.user.controller;
 
 import java.util.Map;
-import java.util.Optional;
+import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.user.entity.User;
-import com.example.user.feign.AdminClient;
+import com.example.user.exception.ValidationException;
+import com.example.user.security.JwtUtil;
 import com.example.user.service.UserService;
 
 @CrossOrigin(origins = "http://127.0.0.1:5500")
@@ -17,81 +18,124 @@ import com.example.user.service.UserService;
 public class UserAuthController {
 
     private final UserService userService;
+    private final JwtUtil jwtUtil;
 
     @Autowired
-    private AdminClient adminClient;
-
-    public UserAuthController(UserService userService) {
+    public UserAuthController(UserService userService, JwtUtil jwtUtil) {
         this.userService = userService;
+        this.jwtUtil = jwtUtil;
     }
 
+    // ======================================================
+    // REGISTER USER OR ADMIN (Same Database + Validation)
+    // ======================================================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
 
-        String role = user.getRole();
+        // -----------------------------------------------------
+        // VALIDATION
+        // -----------------------------------------------------
 
-        if ("Admin".equalsIgnoreCase(role) || "ROLE_ADMIN".equalsIgnoreCase(role)) {
-            user.setRole("ROLE_ADMIN");
-            return forwardToAdminService(user);
+        if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+            throw new ValidationException("Username cannot be empty");
         }
 
-        user.setRole("ROLE_USER");
-
-        if (userService.findByUsername(user.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Username already exists"));
+        if (!Pattern.matches("^[A-Za-z0-9_]{4,20}$", user.getUsername())) {
+            throw new ValidationException("Username must be 4–20 characters (letters, digits, underscore)");
         }
 
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+            throw new ValidationException("Email cannot be empty");
+        }
+
+        if (!Pattern.matches("^[\\w.-]+@[\\w.-]+\\.\\w{2,}$", user.getEmail())) {
+            throw new ValidationException("Invalid email format");
+        }
+
+        if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+            throw new ValidationException("Password cannot be empty");
+        }
+
+        if (user.getPassword().length() < 6) {
+            throw new ValidationException("Password must be at least 6 characters");
+        }
+
+        // Normalize and validate role
+        String role = user.getRole() != null ? user.getRole().toUpperCase() : "ROLE_USER";
+        if (!role.startsWith("ROLE_")) {
+            role = "ROLE_" + role;
+        }
+        if (!role.equals("ROLE_USER") && !role.equals("ROLE_ADMIN")) {
+            throw new ValidationException("Role must be USER or ADMIN");
+        }
+
+        user.setRole(role);
+
+        // -----------------------------------------------------
+        // Unique checks + save in service layer
+        // -----------------------------------------------------
         User saved = userService.register(user);
 
-        return ResponseEntity.ok(Map.of("id", saved.getId(),"username", saved.getUsername(),"message", "User registration successful"));}
+        return ResponseEntity.ok(
+                Map.of(
+                        "id", saved.getId(),
+                        "username", saved.getUsername(),
+                        "role", saved.getRole(),
+                        "message", "Registration successful"
+                )
+        );
+    }
 
+    // ======================================================
+    // LOGIN + JWT TOKEN
+    // ======================================================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
 
         String username = body.get("username");
         String password = body.get("password");
 
-        Optional<User> maybe = userService.findByUsername(username);
-
-        if (maybe.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
+        if (username == null || username.isBlank()) {
+            throw new ValidationException("Username cannot be empty");
         }
 
-        User user = maybe.get();
-
-        if (!userService.checkPassword(user, password)) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
+        if (password == null || password.isBlank()) {
+            throw new ValidationException("Password cannot be empty");
         }
 
-        return ResponseEntity.ok(Map.of("message", "Login successful","username", user.getUsername(),"role", user.getRole()));
+        // Validate login from service
+        User user = userService.validateLogin(username, password);
+
+        // Generate JWT
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "token", token,
+                        "username", user.getUsername(),
+                        "role", user.getRole(),
+                        "message", "Login successful"
+                )
+        );
     }
 
+    // ======================================================
+    // LOGOUT (frontend deletes token)
+    // ======================================================
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
-    
+    // ======================================================
+    // CHECK ROLE (Frontend Support)
+    // ======================================================
     @GetMapping("/check-role/{username}")
     public ResponseEntity<?> checkRole(@PathVariable String username) {
 
-        Optional<User> user = userService.findByUsername(username);
+        User user = userService.findByUsername(username)
+                .orElseThrow(() -> new ValidationException("User not found"));
 
-        if (user.isPresent()) {
-            return ResponseEntity.ok(Map.of("role", user.get().getRole()));
-        }
-
-        return ResponseEntity.status(404).body(Map.of("role", "UNKNOWN"));
-    }
-    
-
-    private ResponseEntity<?> forwardToAdminService(User user) {
-        try {
-            Map<String, Object> response = adminClient.registerAdmin(user);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(500)
-                    .body(Map.of("error", "Admin Service not reachable. Try again later."));
-        }
+        return ResponseEntity.ok(Map.of("role", user.getRole()));
     }
 }

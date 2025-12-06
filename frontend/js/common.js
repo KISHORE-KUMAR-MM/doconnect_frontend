@@ -101,19 +101,124 @@
     }
   }
 
+  // ======================================================
+  // JWT TOKEN MANAGEMENT
+  // ======================================================
+  function getToken() {
+    return localStorage.getItem('token') || null;
+  }
+
+  function setToken(token) {
+    if (token) {
+      localStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+    }
+  }
+
+  function isTokenValid(token) {
+    if (!token) return false;
+    try {
+      // Decode JWT without verification (just to check expiration)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expiration = payload.exp * 1000; // Convert to milliseconds
+      return Date.now() < expiration;
+    } catch (error) {
+      console.warn('Invalid token format:', error);
+      return false;
+    }
+  }
+
+  function clearAuth() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('username');
+    localStorage.removeItem('role');
+  }
+
+  // ======================================================
+  // AUTHENTICATED FETCH FUNCTIONS
+  // ======================================================
+  async function fetchAuth(url, options = {}) {
+    const token = getToken();
+    
+    // Validate token before making request
+    if (!token || !isTokenValid(token)) {
+      clearAuth();
+      if (window.location.pathname !== '/frontend/index.html' && 
+          window.location.pathname !== '/index.html') {
+        window.location.href = './index.html';
+      }
+      throw new Error('Authentication required. Please log in again.');
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+      'Authorization': `Bearer ${token}`,
+    };
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    // Handle 401 Unauthorized - token expired or invalid
+    if (response.status === 401) {
+      clearAuth();
+      if (window.location.pathname !== '/frontend/index.html' && 
+          window.location.pathname !== '/index.html') {
+        window.location.href = './index.html';
+      }
+      throw new Error('Session expired. Please log in again.');
+    }
+
+    return response;
+  }
+
+  async function fetchJsonAuth(url, fallback = null, options = {}) {
+    try {
+      const response = await fetchAuth(url, options);
+      if (!response.ok) {
+        throw new Error(`Request failed: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      if (error.message.includes('Authentication') || error.message.includes('Session expired')) {
+        throw error; // Re-throw auth errors
+      }
+      console.warn('Request failed', error);
+      return fallback;
+    }
+  }
+
+  // ======================================================
+  // USER MANAGEMENT
+  // ======================================================
   function getCurrentUser() {
     const username = localStorage.getItem('username') || '';
     const user = safeParse(localStorage.getItem('user'));
-    return { username, user };
+    const role = localStorage.getItem('role') || '';
+    const token = getToken();
+    return { username, user, role, token };
   }
 
   function requireUser() {
-    const { username, user } = getCurrentUser();
+    const { username, token } = getCurrentUser();
+    
+    // Check if token exists and is valid
+    if (!token || !isTokenValid(token)) {
+      clearAuth();
+      window.location.href = './index.html';
+      return null;
+    }
+    
     if (!username) {
       window.location.href = './index.html';
       return null;
     }
-    return { username, user };
+    
+    return getCurrentUser();
   }
 
   function getCurrentAdmin() {
@@ -147,8 +252,7 @@
       btn.dataset.defaultLabel = btn.textContent.trim();
     }
     btn.addEventListener('click', () => {
-      localStorage.removeItem('user');
-      localStorage.removeItem('username');
+      clearAuth();
       window.location.href = './index.html';
     });
   }
@@ -161,8 +265,14 @@
     truncate,
     escapeHtml,
     fetchJson,
+    fetchAuth,
+    fetchJsonAuth,
     safeParse,
     setButtonLoading,
+    getToken,
+    setToken,
+    isTokenValid,
+    clearAuth,
     getCurrentUser,
     requireUser,
     getCurrentAdmin,
