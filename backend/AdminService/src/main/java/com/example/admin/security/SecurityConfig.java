@@ -1,4 +1,4 @@
-package com.example.user.security;
+package com.example.admin.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,28 +24,24 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
 
-                // ✅ PUBLIC ENDPOINTS
-                .requestMatchers("/api/auth/login", "/api/auth/register" ).permitAll()
+                // Allow admin login + register
+                .requestMatchers("/api/admin/auth/**").permitAll()
 
-                // 🔒 Require authentication for role check
-                .requestMatchers("/api/auth/check-role/**").authenticated()
+                // Admin-Only Moderation APIs
+                .requestMatchers("/api/admin/moderation/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/admin/users/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/admin/questions/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/admin/answers/**").hasAuthority("ROLE_ADMIN")
 
-                // 🔐 ADMIN ONLY
-                .requestMatchers("/api/users/all").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/api/users/status/**").hasAuthority("ROLE_ADMIN")
-
-                // 🔐 USER + ADMIN
-                .requestMatchers("/api/user/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN")
-
-                // 🔒 Everything else
                 .anyRequest().authenticated()
             )
 
-            // JWT Authentication
+            // Use JWT instead of sessions
             .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
 
+            // Add JWT filter
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

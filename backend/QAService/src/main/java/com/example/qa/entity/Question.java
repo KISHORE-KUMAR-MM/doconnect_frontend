@@ -1,8 +1,8 @@
 package com.example.qa.entity;
 
-import java.time.LocalDateTime;
 import jakarta.persistence.*;
 import lombok.Data;
+import java.time.LocalDateTime;
 
 @Entity
 @Data
@@ -12,7 +12,7 @@ public class Question {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     private String topic;
 
     @Column(nullable = false)
@@ -23,13 +23,17 @@ public class Question {
 
     @Column(nullable = false)
     private String status = "PENDING";
-    
-    
+
     @Column(nullable = false)
     private String postedBy;
-    
 
     private LocalDateTime postedAt = LocalDateTime.now();
 
-    private String approvedBy;  
+    private LocalDateTime updatedAt;
+
+    private String approvedBy;
+    private String rejectedBy;
+
+    private boolean closed = false;
+    private boolean resolved = false;
 }

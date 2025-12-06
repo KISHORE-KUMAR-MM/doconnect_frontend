@@ -11,6 +11,13 @@ public interface AnswerService {
 
     List<Answer> getPendingAnswers();
 
+    Answer getById(Long id);
+
+    List<Answer> getAllAnswersForQuestion(Long questionId);
+
+    List<Answer> getAnswersByUser(String username);
+
+    // ADMIN ACTIONS
     Answer approveAnswer(Long id, String approvedBy);
 
     Answer rejectAnswer(Long id, String rejectedBy);

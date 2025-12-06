@@ -3,6 +3,7 @@ package com.example.user.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.example.user.entity.User;
@@ -16,25 +17,28 @@ import com.example.user.repository.UserRepository;
 public class UserService {
 
     private final UserRepository repo;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository repo) {
+    public UserService(UserRepository repo, PasswordEncoder passwordEncoder) {
         this.repo = repo;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // ======================================================
-    // REGISTER USER OR ADMIN
+    // REGISTER USER OR ADMIN (ENCODE PASSWORD)
     // ======================================================
     public User register(User user) {
 
-        // Unique username validation
         if (repo.findByUsername(user.getUsername()).isPresent()) {
             throw new UserAlreadyExistsException("Username already exists");
         }
 
-        // Unique email validation
         if (repo.findByEmail(user.getEmail()).isPresent()) {
             throw new EmailAlreadyExistsException("Email already exists");
         }
+
+        // Encode password before saving
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
 
         return repo.save(user);
     }
@@ -54,14 +58,15 @@ public class UserService {
     }
 
     // ======================================================
-    // VALIDATE LOGIN
+    // VALIDATE LOGIN (CHECK ENCODED PASSWORD)
     // ======================================================
-    public User validateLogin(String username, String password) {
+    public User validateLogin(String username, String rawPassword) {
 
         User user = repo.findByUsername(username)
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid username or password"));
 
-        if (!password.equals(user.getPassword())) {
+        // Compare raw password with encoded password
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
             throw new InvalidCredentialsException("Invalid username or password");
         }
 
@@ -69,14 +74,14 @@ public class UserService {
     }
 
     // ======================================================
-    // GET ALL USERS (ADMIN ACCESS)
+    // GET ALL USERS (ADMIN ONLY)
     // ======================================================
     public List<User> getAllUsers() {
         return repo.findAll();
     }
 
     // ======================================================
-    // UPDATE USER STATUS (ADMIN ACCESS)
+    // UPDATE USER STATUS (ADMIN ONLY)
     // ======================================================
     public User updateUserStatus(Long id, String status) {
 

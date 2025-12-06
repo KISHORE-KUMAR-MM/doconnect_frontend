@@ -26,7 +26,6 @@ public class Answer {
     private String status = "PENDING";
 
     private String approvedBy;
-
     private String rejectedBy;
 
     private LocalDateTime createdAt = LocalDateTime.now();

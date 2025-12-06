@@ -11,12 +11,6 @@ public interface QuestionService {
 
     List<Question> getPendingQuestions();
 
-    Question approveQuestion(Long id, String approvedBy);
-
-    Question rejectQuestion(Long id, String rejectedBy);
-
-    Question closeQuestion(Long id);
-
     Question getById(Long id);
 
     List<Question> search(String keyword);
@@ -24,6 +18,17 @@ public interface QuestionService {
     void deleteQuestion(Long id);
 
     List<Question> getAllQuestions();
-    
+
     Question updateQuestion(Long id, Question updated);
+
+    List<Question> getQuestionsByTopic(String topic);
+
+    // ADMIN operations
+    Question approveQuestion(Long id, String approvedBy);
+
+    Question rejectQuestion(Long id, String rejectedBy);
+
+    Question closeQuestion(Long id);
+
+    Question resolveQuestion(Long id);
 }

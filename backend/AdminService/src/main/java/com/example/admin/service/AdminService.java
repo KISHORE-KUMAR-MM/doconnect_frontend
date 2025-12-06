@@ -1,30 +1,31 @@
 package com.example.admin.service;
 
-import java.util.Optional;
+import java.time.LocalDateTime;
 
 import org.springframework.stereotype.Service;
 
-import com.example.admin.entity.Admin;
-import com.example.admin.repository.AdminRepository;
+import com.example.admin.dto.AdminActionDTO;
+import com.example.admin.entity.AdminLog;
+import com.example.admin.repository.AdminLogRepository;
 
 @Service
 public class AdminService {
 
-    private final AdminRepository repo;
+    private final AdminLogRepository logRepo;
 
-    public AdminService(AdminRepository repo) {
-        this.repo = repo;
+    public AdminService(AdminLogRepository logRepo) {
+        this.logRepo = logRepo;
     }
 
-    public Admin register(Admin admin) {
-        return repo.save(admin);
-    }
+    public void recordAction(AdminActionDTO dto) {
 
-    public Optional<Admin> findByUsername(String username) {
-        return repo.findByUsername(username);
-    }
+        AdminLog log = new AdminLog();
+        log.setAdminUsername(dto.getAdminUsername());
+        log.setAction(dto.getAction());
+        log.setTargetType(dto.getTargetType());
+        log.setTargetId(dto.getTargetId());
+        log.setTimestamp(LocalDateTime.now().toString());
 
-    public boolean checkPassword(Admin admin, String rawPassword) {
-        return rawPassword.equals(admin.getPassword());
+        logRepo.save(log);
     }
 }

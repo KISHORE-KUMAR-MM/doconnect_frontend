@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.user.entity.User;
@@ -17,13 +18,28 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    // ==============================================
+    // GET ALL USERS (ADMIN ONLY - validated via JWT)
+    // ==============================================
     @GetMapping("/all")
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userService.getAllUsers());
     }
 
+    // ==============================================
+    // UPDATE USER STATUS (ADMIN ONLY)
+    // ==============================================
     @PutMapping("/status/{id}")
-    public User updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        return userService.updateUserStatus(id, body.get("status"));
+    public ResponseEntity<User> updateStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        String status = body.get("status");
+        if (status == null || status.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        User updated = userService.updateUserStatus(id, status);
+        return ResponseEntity.ok(updated);
     }
 }

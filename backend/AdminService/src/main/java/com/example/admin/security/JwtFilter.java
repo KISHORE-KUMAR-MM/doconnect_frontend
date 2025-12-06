@@ -1,4 +1,4 @@
-package com.example.user.security;
+package com.example.admin.security;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
@@ -26,43 +26,31 @@ public class JwtFilter extends OncePerRequestFilter {
                                     FilterChain chain)
             throws ServletException, IOException {
 
-        String path = request.getServletPath();
-
-        if (path.equals("/api/auth/login") || path.equals("/api/auth/register")) {
-            chain.doFilter(request, response);
-            return;
-        }
-
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
+
             String token = authHeader.substring(7);
 
             try {
                 var claims = jwtUtil.extractClaims(token);
-
                 String username = claims.get("username", String.class);
                 String role = claims.get("role", String.class);
 
-                if (username != null &&
-                    SecurityContextHolder.getContext().getAuthentication() == null) {
+                if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
-                                    username,
-                                    null,
-                                    Collections.singleton(() -> role)
+                                    username, null, Collections.singleton(() -> role)
                             );
 
-                    authentication.setDetails(
-                            new WebAuthenticationDetailsSource().buildDetails(request)
-                    );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
 
             } catch (Exception e) {
-                System.out.println("JWT validation failed: " + e.getMessage());
+                System.out.println("Invalid JWT Token: " + e.getMessage());
             }
         }
 

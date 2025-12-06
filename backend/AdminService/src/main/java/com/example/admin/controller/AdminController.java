@@ -1,80 +1,91 @@
 package com.example.admin.controller;
 
 import java.util.Map;
-import java.util.Optional;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.example.admin.entity.Admin;
+import com.example.admin.dto.AdminActionDTO;
+import com.example.admin.feign.*;
 import com.example.admin.service.AdminService;
 
-@CrossOrigin(origins = {"http://localhost:5500", "http://localhost:3000", "http://127.0.0.1:5500"})
 @RestController
-@RequestMapping("/api/admin/auth")
-public class AdminAuthController {
+@RequestMapping("/api/admin")
+public class AdminController {
 
     private final AdminService adminService;
+    private final UserServiceClient userClient;
+    private final QAServiceClient qaClient;
 
-    public AdminAuthController(AdminService adminService) {
+    public AdminController(AdminService adminService,
+                           UserServiceClient userClient,
+                           QAServiceClient qaClient) {
         this.adminService = adminService;
+        this.userClient = userClient;
+        this.qaClient = qaClient;
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Admin admin) {
+    // ---------------- APPROVE QUESTION ----------------
+    @PutMapping("/question/approve/{id}")
+    public Object approveQuestion(@PathVariable Long id, @RequestHeader("username") String admin) {
 
-        if (adminService.findByUsername(admin.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Username already exists"));
-        }
+        qaClient.approveQuestion(id);
 
-        admin.setRole("ROLE_ADMIN");
-
-        Admin saved = adminService.register(admin);
-
-        return ResponseEntity.ok(Map.of(
-                "id", saved.getId(),
-                "username", saved.getUsername(),
-                "role", saved.getRole(),
-                "message", "Admin registered successfully"
+        adminService.recordAction(new AdminActionDTO(
+                admin, "APPROVE_QUESTION", "QUESTION", id
         ));
+
+        return "Question approved";
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
+    // ---------------- APPROVE ANSWER ----------------
+    @PutMapping("/answer/approve/{id}")
+    public Object approveAnswer(@PathVariable Long id, @RequestHeader("username") String admin) {
 
-        String username = body.get("username");
-        String password = body.get("password");
+        qaClient.approveAnswer(id);
 
-        Optional<Admin> maybe = adminService.findByUsername(username);
+        adminService.recordAction(new AdminActionDTO(
+                admin, "APPROVE_ANSWER", "ANSWER", id
+        ));
 
-        if (maybe.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
-        }
-
-        Admin admin = maybe.get();
-
-        if (!adminService.checkPassword(admin, password)) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
-        }
-
-        return ResponseEntity.ok(Map.of("message", "Login successful","username", admin.getUsername(),"role", admin.getRole()));
+        return "Answer approved";
     }
 
-    @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
-        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    // ---------------- DELETE QUESTION ----------------
+    @DeleteMapping("/question/{id}")
+    public Object deleteQuestion(@PathVariable Long id, @RequestHeader("username") String admin) {
+
+        qaClient.deleteQuestion(id);
+
+        adminService.recordAction(new AdminActionDTO(
+                admin, "DELETE_QUESTION", "QUESTION", id
+        ));
+
+        return "Question deleted";
     }
 
-    @GetMapping("/check-role/{username}")
-    public ResponseEntity<?> checkAdminRole(@PathVariable String username) {
+    // ---------------- DELETE ANSWER ----------------
+    @DeleteMapping("/answer/{id}")
+    public Object deleteAnswer(@PathVariable Long id, @RequestHeader("username") String admin) {
 
-        Optional<Admin> admin = adminService.findByUsername(username);
+        qaClient.deleteAnswer(id);
 
-        if (admin.isPresent()) {
-            return ResponseEntity.ok(Map.of("role", "ROLE_ADMIN"));
-        }
+        adminService.recordAction(new AdminActionDTO(
+                admin, "DELETE_ANSWER", "ANSWER", id
+        ));
 
-        return ResponseEntity.status(404).body(Map.of("role", "UNKNOWN"));
+        return "Answer deleted";
+    }
+
+    // ---------------- DEACTIVATE USER ----------------
+    @PutMapping("/user/deactivate/{id}")
+    public Object deactivateUser(@PathVariable Long id, @RequestHeader("username") String admin) {
+
+        userClient.updateStatus(id, Map.of("status", "INACTIVE"));
+
+        adminService.recordAction(new AdminActionDTO(
+                admin, "DEACTIVATE_USER", "USER", id
+        ));
+
+        return "User deactivated";
     }
 }

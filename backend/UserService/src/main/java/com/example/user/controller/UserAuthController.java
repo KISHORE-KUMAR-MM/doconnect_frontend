@@ -5,6 +5,7 @@ import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.user.entity.User;
@@ -19,61 +20,50 @@ public class UserAuthController {
 
     private final UserService userService;
     private final JwtUtil jwtUtil;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public UserAuthController(UserService userService, JwtUtil jwtUtil) {
+    public UserAuthController(UserService userService, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
         this.userService = userService;
         this.jwtUtil = jwtUtil;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // ======================================================
-    // REGISTER USER OR ADMIN (Same Database + Validation)
+    // REGISTER
     // ======================================================
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
 
-        // -----------------------------------------------------
         // VALIDATION
-        // -----------------------------------------------------
-
-        if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+        if (user.getUsername() == null || user.getUsername().trim().isEmpty())
             throw new ValidationException("Username cannot be empty");
-        }
 
-        if (!Pattern.matches("^[A-Za-z0-9_]{4,20}$", user.getUsername())) {
-            throw new ValidationException("Username must be 4–20 characters (letters, digits, underscore)");
-        }
+        if (!Pattern.matches("^[A-Za-z0-9_]{4,20}$", user.getUsername()))
+            throw new ValidationException("Username must be 4–20 characters");
 
-        if (user.getEmail() == null || user.getEmail().trim().isEmpty()) {
+        if (user.getEmail() == null || user.getEmail().trim().isEmpty())
             throw new ValidationException("Email cannot be empty");
-        }
 
-        if (!Pattern.matches("^[\\w.-]+@[\\w.-]+\\.\\w{2,}$", user.getEmail())) {
+        if (!Pattern.matches("^[\\w.-]+@[\\w.-]+\\.\\w{2,}$", user.getEmail()))
             throw new ValidationException("Invalid email format");
-        }
 
-        if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+        if (user.getPassword() == null || user.getPassword().trim().isEmpty())
             throw new ValidationException("Password cannot be empty");
-        }
 
-        if (user.getPassword().length() < 6) {
+        if (user.getPassword().length() < 6)
             throw new ValidationException("Password must be at least 6 characters");
-        }
 
-        // Normalize and validate role
+        // ROLE NORMALIZATION
         String role = user.getRole() != null ? user.getRole().toUpperCase() : "ROLE_USER";
-        if (!role.startsWith("ROLE_")) {
-            role = "ROLE_" + role;
-        }
-        if (!role.equals("ROLE_USER") && !role.equals("ROLE_ADMIN")) {
+        if (!role.startsWith("ROLE_")) role = "ROLE_" + role;
+        if (!role.equals("ROLE_USER") && !role.equals("ROLE_ADMIN"))
             throw new ValidationException("Role must be USER or ADMIN");
-        }
 
         user.setRole(role);
 
-        // -----------------------------------------------------
-        // Unique checks + save in service layer
-        // -----------------------------------------------------
+
+        // SAVE
         User saved = userService.register(user);
 
         return ResponseEntity.ok(
@@ -87,7 +77,7 @@ public class UserAuthController {
     }
 
     // ======================================================
-    // LOGIN + JWT TOKEN
+    // LOGIN
     // ======================================================
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
@@ -95,18 +85,18 @@ public class UserAuthController {
         String username = body.get("username");
         String password = body.get("password");
 
-        if (username == null || username.isBlank()) {
+        if (username == null || username.isBlank())
             throw new ValidationException("Username cannot be empty");
-        }
 
-        if (password == null || password.isBlank()) {
+        if (password == null || password.isBlank())
             throw new ValidationException("Password cannot be empty");
-        }
 
-        // Validate login from service
-        User user = userService.validateLogin(username, password);
+        User user = userService.findByUsername(username)
+                .orElseThrow(() -> new ValidationException("Invalid username or password"));
 
-        // Generate JWT
+        if (!passwordEncoder.matches(password, user.getPassword()))
+            throw new ValidationException("Invalid username or password");
+
         String token = jwtUtil.generateToken(user.getUsername(), user.getRole());
 
         return ResponseEntity.ok(
@@ -120,7 +110,7 @@ public class UserAuthController {
     }
 
     // ======================================================
-    // LOGOUT (frontend deletes token)
+    // LOGOUT
     // ======================================================
     @PostMapping("/logout")
     public ResponseEntity<?> logout() {
@@ -128,7 +118,7 @@ public class UserAuthController {
     }
 
     // ======================================================
-    // CHECK ROLE (Frontend Support)
+    // CHECK ROLE
     // ======================================================
     @GetMapping("/check-role/{username}")
     public ResponseEntity<?> checkRole(@PathVariable String username) {
@@ -138,4 +128,7 @@ public class UserAuthController {
 
         return ResponseEntity.ok(Map.of("role", user.getRole()));
     }
-}
+
+   
+    }
+

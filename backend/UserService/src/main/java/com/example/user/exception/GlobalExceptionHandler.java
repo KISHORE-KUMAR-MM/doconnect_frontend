@@ -1,6 +1,5 @@
-package com.example.user.GlobalExceptionHandler;
+package com.example.user.exception;
 
-import com.example.user.exception.*;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
