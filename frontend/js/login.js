@@ -7,7 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!loginForm) return;
 
-  if (localStorage.getItem('username')) {
+  // Only redirect if user has both username and valid token
+  const username = localStorage.getItem('username');
+  const token = window.DoConnect?.getToken();
+  if (username && token && window.DoConnect?.isTokenValid(token)) {
     window.location.href = './dashboard.html';
     return;
   }
@@ -35,8 +38,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const data = await response.json();
+      
+      // Store user data
       localStorage.setItem('user', JSON.stringify(data));
-      localStorage.setItem('username', payload.username);
+      localStorage.setItem('username', data.username || payload.username);
+      if (data.role) {
+        localStorage.setItem('role', data.role);
+      }
+      
+      // Store token using the common.js function
+      if (data.token) {
+        window.DoConnect.setToken(data.token);
+      }
+      
       event.target.reset();
       window.location.href = './dashboard.html';
     } catch (error) {

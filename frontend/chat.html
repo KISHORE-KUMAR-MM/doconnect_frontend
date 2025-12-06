@@ -2,130 +2,246 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>DoConnect Chat Widget</title>
-
-<!-- ======================= CSS ======================= -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
+<link rel="stylesheet" href="./styles.css" />
 <style>
-
-/* Floating Chat Icon */
+/* Chat Widget Styles */
 #chat-icon {
     position: fixed;
-    bottom: 25px;
-    right: 25px;
-    background: #25D366;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 56px;
+    height: 56px;
+    background: var(--brand);
     color: white;
-    font-size: 30px;
-    padding: 14px 18px;
     border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 25px rgba(91, 33, 182, 0.3);
     z-index: 9999;
-    transition: 0.2s ease-in-out;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-size: 1.5rem;
 }
-#chat-icon:hover { transform: scale(1.1); }
 
-/* Chat Popup Window */
+#chat-icon:hover {
+    transform: scale(1.1);
+    box-shadow: 0 15px 35px rgba(91, 33, 182, 0.4);
+}
+
 #chat-popup {
     position: fixed;
-    bottom: 90px;
-    right: 25px;
-    width: 330px;
-    height: 430px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+    bottom: 5rem;
+    right: 1.5rem;
+    width: 380px;
+    height: 500px;
+    background: var(--surface);
+    border-radius: 1.5rem;
+    box-shadow: 0 25px 65px rgba(15, 23, 42, 0.15);
     display: none;
     flex-direction: column;
     overflow: hidden;
-    z-index: 9999;
+    z-index: 9998;
+    border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
-/* Header */
 .chat-header {
-    background: #128C7E;
+    background: var(--brand);
     color: white;
-    padding: 12px;
-    font-size: 18px;
+    padding: 1rem 1.25rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-/* Chat Messages Area */
-.chat-messages {
-    flex: 1;
-    padding: 12px;
-    background: #ece5dd;
-    overflow-y: auto;
-    font-family: Arial, sans-serif;
+.chat-header strong {
+    display: block;
+    font-size: 1.1rem;
 }
 
-/* Chat Input */
-.chat-input {
-    display: flex;
-    border-top: 1px solid #ccc;
+.chat-header small {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.8;
+    margin-top: 0.25rem;
 }
-.chat-input input {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    outline: none;
-}
-.chat-input button {
-    background: #25D366;
+
+#chat-close {
+    background: transparent;
     border: none;
     color: white;
-    padding: 10px 15px;
+    font-size: 1.5rem;
     cursor: pointer;
-}
-.chat-input button:hover {
-    background: #1ebc57;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    transition: background 0.2s ease;
+    line-height: 1;
 }
 
-/* Chat Bubbles */
+#chat-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
 .msg {
-    padding: 8px 12px;
-    margin: 6px 0;
-    border-radius: 8px;
-    max-width: 80%;
-}
-.my-msg {
-    background: #dcf8c6;
-    margin-left: auto;
-}
-.other-msg {
-    background: white;
-    margin-right: auto;
+    max-width: 75%;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    word-wrap: break-word;
 }
 
+.my-msg {
+    background: var(--brand);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.other-msg {
+    background: var(--surface);
+    color: #0f172a;
+    margin-right: auto;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-bottom-left-radius: 0.25rem;
+}
+
+.msg .username-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    opacity: 0.9;
+}
+
+.msg .msg-text {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.chat-input {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.chat-input input {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    font: inherit;
+    font-size: 0.9rem;
+}
+
+.chat-input input:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(91, 33, 182, 0.15);
+}
+
+.chat-input button {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    border-radius: 0.75rem;
+}
+
+@media (max-width: 640px) {
+    #chat-popup {
+        width: calc(100% - 2rem);
+        right: 1rem;
+        bottom: 5rem;
+        height: calc(100vh - 7rem);
+        max-height: 600px;
+    }
+
+    #chat-icon {
+        bottom: 1rem;
+        right: 1rem;
+        width: 48px;
+        height: 48px;
+    }
+}
 </style>
 </head>
 <body>
 
 <!-- ======================= FLOATING CHAT ICON ======================= -->
-<div id="chat-icon">💬</div>
+<div id="chat-icon">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+</div>
 
 <!-- ======================= POPUP CHAT WINDOW ======================= -->
 <div id="chat-popup">
     <div class="chat-header">
-        DoConnect Chat
-        <span id="chat-close" style="cursor:pointer;">✖</span>
+        <div>
+            <strong>DoConnect Chat</strong>
+            <small>Connect with the community</small>
+        </div>
+        <button id="chat-close" aria-label="Close chat">✖</button>
     </div>
     
     <div class="chat-messages" id="chatMessages"></div>
 
     <div class="chat-input">
         <input id="chatInput" type="text" placeholder="Type your message...">
-        <button id="sendBtn">Send</button>
+        <button id="sendBtn" class="btn btn-primary">Send</button>
     </div>
 </div>
 
 <!-- ======================= JAVASCRIPT ======================= -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2/lib/stomp.min.js"></script>
 <script>
+
+// Get username from localStorage or use default
+function getUsername() {
+    const user = localStorage.getItem('user');
+    if (user) {
+        try {
+            const userObj = JSON.parse(user);
+            return userObj.username || 'Guest';
+        } catch (e) {
+            return 'Guest';
+        }
+    }
+    return 'Guest';
+}
+
+// Generate session ID
+function getSessionId() {
+    let sessionId = sessionStorage.getItem('chatSessionId');
+    if (!sessionId) {
+        sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        sessionStorage.setItem('chatSessionId', sessionId);
+    }
+    return sessionId;
+}
 
 // Show popup
 document.getElementById("chat-icon").onclick = () => {
     document.getElementById("chat-popup").style.display = "flex";
+    // Load chat history when opening
+    loadChatHistory();
 };
 
 // Hide popup
@@ -134,13 +250,85 @@ document.getElementById("chat-close").onclick = () => {
 };
 
 // Add message to UI
-function addMessage(text, isMine = true) {
+function addMessage(text, isMine = true, username = null) {
     const container = document.getElementById("chatMessages");
     const msg = document.createElement("div");
     msg.className = isMine ? "msg my-msg" : "msg other-msg";
-    msg.innerText = text;
+    
+    if (username && !isMine) {
+        const usernameSpan = document.createElement("div");
+        usernameSpan.className = "username-label";
+        usernameSpan.textContent = username;
+        msg.appendChild(usernameSpan);
+    }
+    
+    const textNode = document.createElement("div");
+    textNode.className = "msg-text";
+    textNode.textContent = text;
+    msg.appendChild(textNode);
+    
     container.appendChild(msg);
     container.scrollTop = container.scrollHeight;
+}
+
+// STOMP client
+let stompClient = null;
+const username = getUsername();
+const sessionId = getSessionId();
+let lastSentMessage = null; // Track last sent message to avoid duplicates
+let lastSentTime = 0;
+
+function connectWebSocket() {
+    const socket = new SockJS('http://localhost:8084/ws');
+    stompClient = Stomp.over(socket);
+    
+    stompClient.connect({}, function(frame) {
+        console.log('Connected: ' + frame);
+        
+        // Subscribe to public topic
+        stompClient.subscribe('/topic/public', function(message) {
+            const chatMessage = JSON.parse(message.body);
+            const isMine = chatMessage.username === username;
+            
+            // Skip if this is our own message that we just sent (within 2 seconds)
+            if (isMine && lastSentMessage && 
+                chatMessage.message === lastSentMessage &&
+                Date.now() - lastSentTime < 2000) {
+                lastSentMessage = null; // Clear after processing
+                return; // Don't add duplicate
+            }
+            
+            addMessage(chatMessage.message, isMine, chatMessage.username);
+        });
+        
+        // Notify that user joined
+        stompClient.send("/app/chat.addUser", {}, JSON.stringify({
+            username: username,
+            sessionId: sessionId
+        }));
+    }, function(error) {
+        console.error('STOMP error: ' + error);
+        setTimeout(connectWebSocket, 5000); // Retry after 5 seconds
+    });
+}
+
+// Load chat history from REST API
+async function loadChatHistory() {
+    try {
+        const response = await fetch(`http://localhost:8084/api/chat/history/${sessionId}`);
+        if (response.ok) {
+            const messages = await response.json();
+            const container = document.getElementById("chatMessages");
+            container.innerHTML = ''; // Clear existing messages
+            
+            messages.forEach(msg => {
+                const isMine = msg.username === username;
+                addMessage(msg.message, isMine, msg.username);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading chat history:', error);
+    }
 }
 
 // Send message
@@ -149,42 +337,42 @@ document.getElementById("chatInput").addEventListener("keypress", function(evt) 
     if (evt.key === "Enter") sendMessage();
 });
 
-// Placeholder WebSocket (you will update URL later)
-let socket = null;
-
-function connectWebSocket() {
-    try {
-        socket = new WebSocket("ws://localhost:8083/chat"); // update later
-
-        socket.onopen = () => console.log("WebSocket Connected");
-
-        socket.onmessage = (event) => {
-            addMessage(event.data, false);
-        };
-
-        socket.onerror = (err) => console.error("WebSocket error:", err);
-
-    } catch (e) {
-        console.error("WebSocket connection failed:", e);
-    }
-}
-
-connectWebSocket();
-
 function sendMessage() {
     const input = document.getElementById("chatInput");
     const text = input.value.trim();
     if (!text) return;
 
-    addMessage(text, true);
-
-    // send to backend (once WebSocket is ready)
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(text);
+    if (stompClient && stompClient.connected) {
+        // Track this message to avoid duplicate when it comes back from server
+        lastSentMessage = text;
+        lastSentTime = Date.now();
+        
+        // Add message optimistically to UI
+        addMessage(text, true);
+        
+        // Send to server
+        stompClient.send("/app/chat.sendMessage", {}, JSON.stringify({
+            username: username,
+            message: text,
+            sessionId: sessionId
+        }));
+        
+        input.value = "";
+        
+        // Clear tracking after 3 seconds (message should have come back by then)
+        setTimeout(() => {
+            if (lastSentMessage === text) {
+                lastSentMessage = null;
+            }
+        }, 3000);
+    } else {
+        console.error('STOMP client not connected');
+        alert('Chat service is not connected. Please wait a moment and try again.');
     }
-
-    input.value = "";
 }
+
+// Connect on page load
+connectWebSocket();
 
 </script>
 

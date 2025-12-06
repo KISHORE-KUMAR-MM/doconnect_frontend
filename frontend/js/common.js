@@ -28,6 +28,11 @@
       all: 'http://localhost:8081/api/users/all',
       toggle: (id) => `http://localhost:8081/api/users/status/${id}`,
     },
+    chat: {
+      history: (sessionId) => `http://localhost:8084/api/chat/history/${sessionId}`,
+      userMessages: (username) => `http://localhost:8084/api/chat/user/${username}`,
+      websocket: 'http://localhost:8084/ws',
+    },
   };
 
   function showStatus(element, message, type) {

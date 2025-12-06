@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="./styles.css" />
     <script src="./js/common.js" defer></script>
     <script src="./js/dashboard.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2/lib/stomp.min.js"></script>
   </head>
   <body>
     <div class="app-shell">
@@ -78,6 +80,196 @@
         </div>
       </main>
     </div>
+
+    <!-- Chat Widget -->
+    <div id="chat-icon" class="chat-widget-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+
+    <div id="chat-popup" class="chat-widget-popup">
+      <div class="chat-widget-header">
+        <div>
+          <strong>DoConnect Chat</strong>
+          <small style="display: block; font-size: 0.75rem; opacity: 0.8;">Connect with the community</small>
+        </div>
+        <button id="chat-close" class="chat-widget-close" aria-label="Close chat">✖</button>
+      </div>
+      
+      <div class="chat-widget-messages" id="chatMessages"></div>
+
+      <div class="chat-widget-input">
+        <input id="chatInput" type="text" placeholder="Type your message..." />
+        <button id="sendBtn" class="btn btn-primary">Send</button>
+      </div>
+    </div>
+
+    <script>
+      // Chat Widget Script
+      (function() {
+        // Get username from localStorage or use default
+        function getUsername() {
+          const user = localStorage.getItem('user');
+          if (user) {
+            try {
+              const userObj = JSON.parse(user);
+              return userObj.username || 'Guest';
+            } catch (e) {
+              return 'Guest';
+            }
+          }
+          const username = localStorage.getItem('username');
+          return username || 'Guest';
+        }
+
+        // Generate session ID
+        function getSessionId() {
+          let sessionId = sessionStorage.getItem('chatSessionId');
+          if (!sessionId) {
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            sessionStorage.setItem('chatSessionId', sessionId);
+          }
+          return sessionId;
+        }
+
+        // Show popup
+        document.getElementById("chat-icon").onclick = () => {
+          document.getElementById("chat-popup").style.display = "flex";
+          loadChatHistory();
+        };
+
+        // Hide popup
+        document.getElementById("chat-close").onclick = () => {
+          document.getElementById("chat-popup").style.display = "none";
+        };
+
+        // Add message to UI
+        function addMessage(text, isMine = true, username = null) {
+          const container = document.getElementById("chatMessages");
+          const msg = document.createElement("div");
+          msg.className = isMine ? "chat-msg chat-msg-mine" : "chat-msg chat-msg-other";
+          
+          if (username && !isMine) {
+            const usernameSpan = document.createElement("div");
+            usernameSpan.className = "chat-msg-username";
+            usernameSpan.textContent = username;
+            msg.appendChild(usernameSpan);
+          }
+          
+          const textNode = document.createElement("div");
+          textNode.className = "chat-msg-text";
+          textNode.textContent = text;
+          msg.appendChild(textNode);
+          
+          container.appendChild(msg);
+          container.scrollTop = container.scrollHeight;
+        }
+
+        // STOMP client
+        let stompClient = null;
+        const username = getUsername();
+        const sessionId = getSessionId();
+        let lastSentMessage = null; // Track last sent message to avoid duplicates
+        let lastSentTime = 0;
+
+        function connectWebSocket() {
+          const socket = new SockJS('http://localhost:8084/ws');
+          stompClient = Stomp.over(socket);
+          
+          stompClient.connect({}, function(frame) {
+            console.log('Chat connected: ' + frame);
+            
+            // Subscribe to public topic
+            stompClient.subscribe('/topic/public', function(message) {
+              const chatMessage = JSON.parse(message.body);
+              const isMine = chatMessage.username === username;
+              
+              // Skip if this is our own message that we just sent (within 2 seconds)
+              if (isMine && lastSentMessage && 
+                  chatMessage.message === lastSentMessage &&
+                  Date.now() - lastSentTime < 2000) {
+                lastSentMessage = null; // Clear after processing
+                return; // Don't add duplicate
+              }
+              
+              addMessage(chatMessage.message, isMine, chatMessage.username);
+            });
+            
+            // Notify that user joined
+            stompClient.send("/app/chat.addUser", {}, JSON.stringify({
+              username: username,
+              sessionId: sessionId
+            }));
+          }, function(error) {
+            console.error('STOMP error: ' + error);
+            setTimeout(connectWebSocket, 5000);
+          });
+        }
+
+        // Load chat history from REST API
+        async function loadChatHistory() {
+          try {
+            const response = await fetch(`http://localhost:8084/api/chat/history/${sessionId}`);
+            if (response.ok) {
+              const messages = await response.json();
+              const container = document.getElementById("chatMessages");
+              container.innerHTML = '';
+              
+              messages.forEach(msg => {
+                const isMine = msg.username === username;
+                addMessage(msg.message, isMine, msg.username);
+              });
+            }
+          } catch (error) {
+            console.error('Error loading chat history:', error);
+          }
+        }
+
+        // Send message
+        document.getElementById("sendBtn").onclick = sendMessage;
+        document.getElementById("chatInput").addEventListener("keypress", function(evt) {
+          if (evt.key === "Enter") sendMessage();
+        });
+
+        function sendMessage() {
+          const input = document.getElementById("chatInput");
+          const text = input.value.trim();
+          if (!text) return;
+
+          if (stompClient && stompClient.connected) {
+            // Track this message to avoid duplicate when it comes back from server
+            lastSentMessage = text;
+            lastSentTime = Date.now();
+            
+            // Add message optimistically to UI
+            addMessage(text, true);
+            
+            // Send to server
+            stompClient.send("/app/chat.sendMessage", {}, JSON.stringify({
+              username: username,
+              message: text,
+              sessionId: sessionId
+            }));
+            
+            input.value = "";
+            
+            // Clear tracking after 3 seconds (message should have come back by then)
+            setTimeout(() => {
+              if (lastSentMessage === text) {
+                lastSentMessage = null;
+              }
+            }, 3000);
+          } else {
+            console.error('STOMP client not connected');
+            alert('Chat service is not connected. Please wait a moment and try again.');
+          }
+        }
+
+        // Connect on page load
+        connectWebSocket();
+      })();
+    </script>
   </body>
 </html>
 
