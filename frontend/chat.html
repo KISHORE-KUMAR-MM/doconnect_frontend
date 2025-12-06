@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DoConnect Chat Widget</title>
+
+<!-- ======================= CSS ======================= -->
+<style>
+
+/* Floating Chat Icon */
+#chat-icon {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    background: #25D366;
+    color: white;
+    font-size: 30px;
+    padding: 14px 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    transition: 0.2s ease-in-out;
+}
+#chat-icon:hover { transform: scale(1.1); }
+
+/* Chat Popup Window */
+#chat-popup {
+    position: fixed;
+    bottom: 90px;
+    right: 25px;
+    width: 330px;
+    height: 430px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 9999;
+}
+
+/* Header */
+.chat-header {
+    background: #128C7E;
+    color: white;
+    padding: 12px;
+    font-size: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Chat Messages Area */
+.chat-messages {
+    flex: 1;
+    padding: 12px;
+    background: #ece5dd;
+    overflow-y: auto;
+    font-family: Arial, sans-serif;
+}
+
+/* Chat Input */
+.chat-input {
+    display: flex;
+    border-top: 1px solid #ccc;
+}
+.chat-input input {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    outline: none;
+}
+.chat-input button {
+    background: #25D366;
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    cursor: pointer;
+}
+.chat-input button:hover {
+    background: #1ebc57;
+}
+
+/* Chat Bubbles */
+.msg {
+    padding: 8px 12px;
+    margin: 6px 0;
+    border-radius: 8px;
+    max-width: 80%;
+}
+.my-msg {
+    background: #dcf8c6;
+    margin-left: auto;
+}
+.other-msg {
+    background: white;
+    margin-right: auto;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ======================= FLOATING CHAT ICON ======================= -->
+<div id="chat-icon">💬</div>
+
+<!-- ======================= POPUP CHAT WINDOW ======================= -->
+<div id="chat-popup">
+    <div class="chat-header">
+        DoConnect Chat
+        <span id="chat-close" style="cursor:pointer;">✖</span>
+    </div>
+    
+    <div class="chat-messages" id="chatMessages"></div>
+
+    <div class="chat-input">
+        <input id="chatInput" type="text" placeholder="Type your message...">
+        <button id="sendBtn">Send</button>
+    </div>
+</div>
+
+<!-- ======================= JAVASCRIPT ======================= -->
+<script>
+
+// Show popup
+document.getElementById("chat-icon").onclick = () => {
+    document.getElementById("chat-popup").style.display = "flex";
+};
+
+// Hide popup
+document.getElementById("chat-close").onclick = () => {
+    document.getElementById("chat-popup").style.display = "none";
+};
+
+// Add message to UI
+function addMessage(text, isMine = true) {
+    const container = document.getElementById("chatMessages");
+    const msg = document.createElement("div");
+    msg.className = isMine ? "msg my-msg" : "msg other-msg";
+    msg.innerText = text;
+    container.appendChild(msg);
+    container.scrollTop = container.scrollHeight;
+}
+
+// Send message
+document.getElementById("sendBtn").onclick = sendMessage;
+document.getElementById("chatInput").addEventListener("keypress", function(evt) {
+    if (evt.key === "Enter") sendMessage();
+});
+
+// Placeholder WebSocket (you will update URL later)
+let socket = null;
+
+function connectWebSocket() {
+    try {
+        socket = new WebSocket("ws://localhost:8083/chat"); // update later
+
+        socket.onopen = () => console.log("WebSocket Connected");
+
+        socket.onmessage = (event) => {
+            addMessage(event.data, false);
+        };
+
+        socket.onerror = (err) => console.error("WebSocket error:", err);
+
+    } catch (e) {
+        console.error("WebSocket connection failed:", e);
+    }
+}
+
+connectWebSocket();
+
+function sendMessage() {
+    const input = document.getElementById("chatInput");
+    const text = input.value.trim();
+    if (!text) return;
+
+    addMessage(text, true);
+
+    // send to backend (once WebSocket is ready)
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(text);
+    }
+
+    input.value = "";
+}
+
+</script>
+
+</body>
+</html>
